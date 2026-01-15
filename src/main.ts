@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { RedisSocketIoAdapterPlugin } from './plugins/redis-socket-io-adapter.plugin';
+import { RedisSocketIoAdapterPlugin } from './_plugins/redis-socket-io-adapter.plugin';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
