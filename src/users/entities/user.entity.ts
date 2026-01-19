@@ -49,9 +49,9 @@ export class User {
   }
 
   @BeforeUpdate()
-  async hashPassword() {
+  @BeforeInsert()
+  private async hashPassword() {
     if (this.password) {
-      console.log('Hashing password for user:', this.username);
       this.password = await hash(this.password);
     }
   }
