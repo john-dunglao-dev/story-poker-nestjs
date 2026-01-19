@@ -14,7 +14,7 @@ export class UserAlreadyExistsExceptionFilter {
     const driverError = exception.driverError as unknown as MysqlDriverError;
 
     if (driverError.code === 'ER_DUP_ENTRY') {
-      this.logger.error(`Database error: ${exception.message}`);
+      this.logger.error(`[Caught Error] Database error: ${exception.message}`);
 
       return response.status(HttpStatus.UNPROCESSABLE_ENTITY).json({
         statusCode: HttpStatus.UNPROCESSABLE_ENTITY,
@@ -24,10 +24,13 @@ export class UserAlreadyExistsExceptionFilter {
       });
     }
 
-    this.logger.error(`Unexpected error: ${exception.message}`);
+    this.logger.error(
+      `[Uncaught Error] Unexpected error: ${exception.message}`,
+    );
 
-    return response.status(500).json({
-      statusCode: 500,
+    return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      error: true,
+      statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
       timestamp: new Date().toISOString(),
       path: request.url,
       message: 'Internal server error',

@@ -12,6 +12,7 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserAlreadyExistsExceptionFilter } from './filters/exceptions/user-already-exists-exception.filter';
+import { UserNotExistingExceptionFilter } from './filters/exceptions/user-not-existing-exception.filter';
 
 @Controller('users')
 export class UsersController {
@@ -33,6 +34,7 @@ export class UsersController {
     return this.usersService.findOne(+id);
   }
 
+  @UseFilters(UserNotExistingExceptionFilter)
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(+id, updateUserDto);

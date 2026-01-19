@@ -1,4 +1,7 @@
+import { hash } from 'argon2';
 import {
+  BeforeInsert,
+  BeforeUpdate,
   Column,
   CreateDateColumn,
   DeleteDateColumn,
@@ -43,5 +46,13 @@ export class User {
 
   constructor(user: Partial<User>) {
     Object.assign(this, user);
+  }
+
+  @BeforeUpdate()
+  async hashPassword() {
+    if (this.password) {
+      console.log('Hashing password for user:', this.username);
+      this.password = await hash(this.password);
+    }
   }
 }
