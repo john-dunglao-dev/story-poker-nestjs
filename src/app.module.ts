@@ -10,6 +10,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { VotesModule } from './votes/votes.module';
 import { ResultsModule } from './results/results.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ResultsModule } from './results/results.module';
     EmailModule,
     VotesModule,
     ResultsModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

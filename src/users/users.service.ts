@@ -31,12 +31,24 @@ export class UsersService {
     return this.usersRepository.find();
   }
 
-  async findOne(id: number) {
-    return await this.usersRepository.findOneBy({ id });
+  async findOne(
+    params: Pick<Partial<User>, 'username' | 'email' | 'id' | 'isActive'>,
+  ) {
+    return await this.usersRepository.findOneBy({ ...params });
+  }
+
+  async findOneWithHiddenFields(
+    params: Pick<Partial<User>, 'username' | 'email' | 'id'>,
+  ) {
+    return await this.usersRepository
+      .createQueryBuilder('users')
+      .addSelect(['users.password', 'users.updatedAt', 'users.deletedAt'])
+      .where(params)
+      .getOne();
   }
 
   async update(id: number, updateUserDto: UpdateUserDto) {
-    const user = await this.findOne(id);
+    const user = await this.findOne({ id });
 
     if (!user) {
       throw new NotFoundException('Attempted to update a non-existing user.');

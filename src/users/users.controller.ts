@@ -7,6 +7,8 @@ import {
   Param,
   Delete,
   UseFilters,
+  UseInterceptors,
+  ClassSerializerInterceptor,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -14,6 +16,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UserAlreadyExistsExceptionFilter } from './filters/exceptions/user-already-exists-exception.filter';
 import { UserNotExistingExceptionFilter } from './filters/exceptions/user-not-existing-exception.filter';
 
+@UseInterceptors(ClassSerializerInterceptor)
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
@@ -31,7 +34,7 @@ export class UsersController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.usersService.findOne(+id);
+    return this.usersService.findOne({ id: +id });
   }
 
   @UseFilters(UserNotExistingExceptionFilter)

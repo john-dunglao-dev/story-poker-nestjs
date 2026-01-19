@@ -1,4 +1,5 @@
 import { hash } from 'argon2';
+import { Exclude } from 'class-transformer';
 import {
   BeforeInsert,
   BeforeUpdate,
@@ -24,6 +25,7 @@ export class User {
   @Column()
   email: string;
 
+  @Exclude({ toPlainOnly: true })
   @Column()
   password: string;
 
@@ -35,10 +37,10 @@ export class User {
   @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamp' })
+  @UpdateDateColumn({ type: 'timestamp', select: false })
   updatedAt: Date;
 
-  @DeleteDateColumn({ type: 'timestamp' })
+  @DeleteDateColumn({ type: 'timestamp', select: false })
   deletedAt: Date | null;
 
   @Column({ nullable: true, type: 'timestamp' })
