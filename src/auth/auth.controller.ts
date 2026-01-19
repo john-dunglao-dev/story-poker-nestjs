@@ -1,15 +1,28 @@
-import { Controller, Post, Body, Get, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  HttpStatus,
+  Req,
+  UseInterceptors,
+  ClassSerializerInterceptor,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignInAuthDto } from './dto/sign-in-auth.dto';
 import { Public } from 'src/_decorators/public.decorator';
+import { RefreshAuthTokenDto } from './dto/refresh-auth-token.dto';
+import { RequestWithUserOverride } from 'src/_overrides/request-with-user.override';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Public()
-  @Post('register')
-  register() {}
+  @UseInterceptors(ClassSerializerInterceptor)
+  @Get('user')
+  getUser(@Req() request: RequestWithUserOverride) {
+    return this.authService.getUserFromUsername(request?.user?.username);
+  }
 
   @Get()
   getStatus() {
@@ -23,9 +36,10 @@ export class AuthController {
     return this.authService.signIn(username, password);
   }
 
+  @Public()
   @Post('refresh')
-  refreshToken() {}
-
-  @Post('sign-out')
-  signOut() {}
+  refreshToken(@Body() refreshAuthTokenDto: RefreshAuthTokenDto) {
+    const { accessToken, refreshToken } = refreshAuthTokenDto;
+    return this.authService.refreshToken(accessToken, refreshToken);
+  }
 }
