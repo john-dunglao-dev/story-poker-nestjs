@@ -5,6 +5,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RoomsModule } from './rooms/rooms.module';
 import { UsersModule } from './users/users.module';
+import { EmailModule } from './email/email.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
+import { VotesModule } from './votes/votes.module';
+import { ResultsModule } from './results/results.module';
 
 @Module({
   imports: [
@@ -19,11 +24,18 @@ import { UsersModule } from './users/users.module';
         database: configService.getOrThrow<string>('DB_NAME', 'test'),
         autoLoadEntities: true,
         synchronize: false,
+        namingStrategy: new SnakeNamingStrategy(),
       }),
       inject: [ConfigService],
     }),
+    EventEmitterModule.forRoot({
+      verboseMemoryLeak: true,
+    }),
     RoomsModule,
     UsersModule,
+    EmailModule,
+    VotesModule,
+    ResultsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -8,8 +8,8 @@ export class RedisSocketIoAdapterPlugin extends IoAdapter {
   private adapter: ReturnType<typeof createAdapter>;
   private logger = new Logger(RedisSocketIoAdapterPlugin.name);
 
-  async connectToRedis(): Promise<void> {
-    const pubClient = createClient({ url: 'redis://redis:6379' });
+  async connectToRedis(host: string, port: number): Promise<void> {
+    const pubClient = createClient({ url: `redis://${host}:${port}` });
     const subClient = pubClient.duplicate();
 
     await Promise.all([pubClient.connect(), subClient.connect()]);
@@ -24,7 +24,7 @@ export class RedisSocketIoAdapterPlugin extends IoAdapter {
       ...options,
       transports: ['websocket'],
       cors: {
-        origin: ['http://storypoker.local'],
+        origin: ['http://storypoker.local', 'https://storypoker.local'],
       },
     }) as Server;
 
