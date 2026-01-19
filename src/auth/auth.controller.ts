@@ -7,6 +7,7 @@ import { Public } from 'src/_decorators/public.decorator';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Public()
   @Post('register')
   register() {}
 
