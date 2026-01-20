@@ -11,6 +11,8 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { VotesModule } from './votes/votes.module';
 import { ResultsModule } from './results/results.module';
 import { AuthModule } from './auth/auth.module';
+import { CacheModule } from '@nestjs/cache-manager';
+import KeyvRedis from '@keyv/redis';
 
 @Module({
   imports: [
@@ -26,6 +28,17 @@ import { AuthModule } from './auth/auth.module';
         autoLoadEntities: true,
         synchronize: false,
         namingStrategy: new SnakeNamingStrategy(),
+      }),
+      inject: [ConfigService],
+    }),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      useFactory: (configService: ConfigService) => ({
+        stores: [
+          new KeyvRedis(
+            `redis://${configService.getOrThrow<string>('REDIS_HOST', 'localhost')}:${configService.getOrThrow<number>('REDIS_PORT', 6379)}`,
+          ),
+        ],
       }),
       inject: [ConfigService],
     }),

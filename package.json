@@ -25,6 +25,8 @@
     "migration:revert": "npm run typeorm migration:revert -- -d ./type-orm.config.ts"
   },
   "dependencies": {
+    "@keyv/redis": "^5.1.5",
+    "@nestjs/cache-manager": "^3.1.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
@@ -37,6 +39,7 @@
     "@nestjs/websockets": "^11.1.11",
     "@socket.io/redis-adapter": "^8.3.0",
     "argon2": "^0.44.0",
+    "cache-manager": "^7.2.8",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
     "dotenv": "^17.2.3",

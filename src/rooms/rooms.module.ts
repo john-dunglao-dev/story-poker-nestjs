@@ -5,9 +5,11 @@ import { RoomsController } from './rooms.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Room } from './entities/room.entity';
 import { WsRoomsService } from './ws-rooms.service';
+import { ResultsModule } from 'src/results/results.module';
+import { VotesModule } from 'src/votes/votes.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Room])],
+  imports: [TypeOrmModule.forFeature([Room]), ResultsModule, VotesModule],
   providers: [RoomsGateway, RoomsService, WsRoomsService],
   controllers: [RoomsController],
 })
