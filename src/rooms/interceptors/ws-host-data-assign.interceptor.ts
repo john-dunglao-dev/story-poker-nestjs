@@ -2,6 +2,7 @@ import {
   CallHandler,
   ExecutionContext,
   Injectable,
+  Logger,
   NestInterceptor,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
@@ -10,6 +11,8 @@ import { AuthService } from 'src/auth/auth.service';
 
 @Injectable()
 export class WsHostDataAssignInterceptor implements NestInterceptor {
+  private readonly logger = new Logger(WsHostDataAssignInterceptor.name);
+
   constructor(private readonly authService: AuthService) {}
 
   async intercept(
@@ -23,9 +26,21 @@ export class WsHostDataAssignInterceptor implements NestInterceptor {
     const token = this.extractHeaderToken(client);
 
     if (token) {
-      await this.authService.validateToken(token).then((payload) => {
-        client.data.host = { username: payload.username };
-      });
+      try {
+        await this.authService.validateToken(token).then((payload) => {
+          client.data.host = { username: payload.username };
+
+          this.logger.log(
+            'Token validated in WebSocket connection for host data assignment',
+            payload.username,
+          );
+        });
+      } catch {
+        this.logger.warn(
+          'Invalid or expired token provided in WebSocket connection',
+          token,
+        );
+      }
     }
 
     return next.handle();

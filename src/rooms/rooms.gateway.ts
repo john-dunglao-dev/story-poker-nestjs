@@ -97,5 +97,6 @@ export class RoomsGateway
   @SubscribeMessage('showVotes')
   async handleShowVotes(@ConnectedSocket() client: ClientSocketOverride) {
     await this.wsRoomsService.reveal(client);
+    await this.wsRoomsService.reset(client.data.roomSlug!);
   }
 }
