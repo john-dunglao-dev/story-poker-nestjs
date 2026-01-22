@@ -20,10 +20,12 @@ export class CreateRoomsTable1768467632605 implements MigrationInterface {
         deleted_at TIMESTAMP NULL DEFAULT NULL,
 
         UNIQUE KEY uq_room_slug_by_host (slug, user_id, deleted_at),
+        KEY idx_user_id (user_id),
         KEY idx_is_active (is_active),
         KEY idx_created_at (created_at),
 
         CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES users(id)
+          ON DELETE RESTRICT
       );
     `);
   }

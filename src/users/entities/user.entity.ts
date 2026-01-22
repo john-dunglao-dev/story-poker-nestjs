@@ -1,27 +1,24 @@
 import { hash } from 'argon2';
 import { Exclude } from 'class-transformer';
+import { BaseEntity } from 'src/_database/entities/base.entity';
+import { Room } from 'src/rooms/entities/room.entity';
 import {
   BeforeInsert,
   BeforeUpdate,
   Column,
-  CreateDateColumn,
-  DeleteDateColumn,
   Entity,
-  Index,
+  OneToMany,
   PrimaryGeneratedColumn,
-  UpdateDateColumn,
 } from 'typeorm';
 
 @Entity('users')
-export class User {
+export class User extends BaseEntity<User> {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Index({ unique: true })
   @Column()
   username: string;
 
-  @Index({ unique: true })
   @Column()
   email: string;
 
@@ -29,25 +26,15 @@ export class User {
   @Column()
   password: string;
 
-  @Index()
   @Column({ default: true })
   isActive: boolean;
-
-  @Index()
-  @CreateDateColumn({ type: 'timestamp' })
-  createdAt: Date;
-
-  @UpdateDateColumn({ type: 'timestamp', select: false })
-  updatedAt: Date;
-
-  @DeleteDateColumn({ type: 'timestamp', select: false })
-  deletedAt: Date | null;
 
   @Column({ nullable: true, type: 'timestamp' })
   validatedAt: Date | null;
 
   constructor(user: Partial<User>) {
-    Object.assign(this, user);
+    super();
+    this.assign(user);
   }
 
   @BeforeUpdate()
@@ -57,4 +44,7 @@ export class User {
       this.password = await hash(this.password);
     }
   }
+
+  @OneToMany(() => Room, (room) => room.user, { eager: false })
+  rooms: Room[];
 }

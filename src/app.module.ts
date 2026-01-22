@@ -13,9 +13,13 @@ import { ResultsModule } from './results/results.module';
 import { AuthModule } from './auth/auth.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import KeyvRedis from '@keyv/redis';
+import { RedisModule } from './redis/redis.module';
+import { DataSource, DataSourceOptions } from 'typeorm';
+import { addTransactionalDataSource } from 'typeorm-transactional-decorator';
 
 @Module({
   imports: [
+    RedisModule,
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
       useFactory: (configService: ConfigService) => ({
@@ -29,6 +33,11 @@ import KeyvRedis from '@keyv/redis';
         synchronize: false,
         namingStrategy: new SnakeNamingStrategy(),
       }),
+      dataSourceFactory: async (options: DataSourceOptions) => {
+        const dataSource = new DataSource(options);
+        await dataSource.initialize();
+        return addTransactionalDataSource(dataSource);
+      },
       inject: [ConfigService],
     }),
     CacheModule.registerAsync({
@@ -36,7 +45,10 @@ import KeyvRedis from '@keyv/redis';
       useFactory: (configService: ConfigService) => ({
         stores: [
           new KeyvRedis(
-            `redis://${configService.getOrThrow<string>('REDIS_HOST', 'localhost')}:${configService.getOrThrow<number>('REDIS_PORT', 6379)}`,
+            configService.getOrThrow<string>(
+              'REDIS_URL',
+              'redis://localhost:6379',
+            ),
           ),
         ],
       }),

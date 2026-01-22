@@ -8,8 +8,8 @@ export class RedisSocketIoAdapterPlugin extends IoAdapter {
   private adapter: ReturnType<typeof createAdapter>;
   private logger = new Logger(RedisSocketIoAdapterPlugin.name);
 
-  async connectToRedis(host: string, port: number): Promise<void> {
-    const pubClient = createClient({ url: `redis://${host}:${port}` });
+  async connectToRedis(url: string): Promise<void> {
+    const pubClient = createClient({ url });
     const subClient = pubClient.duplicate();
 
     await Promise.all([pubClient.connect(), subClient.connect()]);

@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@keyv/redis": "^5.1.5",
+    "@nestjs-redis/client": "^0.13.4",
     "@nestjs/cache-manager": "^3.1.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
@@ -49,7 +50,8 @@
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.3",
     "typeorm": "^0.3.28",
-    "typeorm-naming-strategies": "^4.1.0"
+    "typeorm-naming-strategies": "^4.1.0",
+    "typeorm-transactional-decorator": "^1.0.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

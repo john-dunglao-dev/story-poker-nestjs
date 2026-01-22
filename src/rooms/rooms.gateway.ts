@@ -7,12 +7,15 @@ import {
   ConnectedSocket,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  WsException,
 } from '@nestjs/websockets';
 import { Server } from 'socket.io';
-import { Logger } from '@nestjs/common';
+import { Logger, UseFilters, UseInterceptors } from '@nestjs/common';
 import { JoinRoomDto } from './dto/join-room.dto';
 import { WsRoomsService } from './ws-rooms.service';
 import { ClientSocketOverride } from './overrides/client-socket.overrides';
+import { AttendanceWsException } from './filters/attendance-ws-exception.filter';
+import { WsRoomCheckInterceptor } from './interceptors/ws-room-check.interceptor';
 
 @WebSocketGateway()
 export class RoomsGateway
@@ -54,6 +57,8 @@ export class RoomsGateway
     await this.wsRoomsService.leave(client);
   }
 
+  @UseInterceptors(WsRoomCheckInterceptor)
+  @UseFilters(AttendanceWsException)
   @SubscribeMessage('kickUser')
   async handleKickUser(
     @ConnectedSocket() client: ClientSocketOverride,
@@ -67,24 +72,27 @@ export class RoomsGateway
     }
   }
 
+  @UseInterceptors(WsRoomCheckInterceptor)
+  @UseFilters(AttendanceWsException)
   @SubscribeMessage('startVoting')
-  handleStartVoting(
-    @ConnectedSocket() client: ClientSocketOverride,
-    @MessageBody() data: { id: number },
-  ) {
-    this.wsRoomsService.reset(data.id.toString());
+  async handleStartVoting(@ConnectedSocket() client: ClientSocketOverride) {
+    await this.wsRoomsService.reset(client.data.roomSlug!);
   }
 
+  @UseInterceptors(WsRoomCheckInterceptor)
+  @UseFilters(AttendanceWsException)
   @SubscribeMessage('submitVote')
-  handleSubmitVote(
+  async handleSubmitVote(
     @ConnectedSocket() client: ClientSocketOverride,
     @MessageBody() data: { vote: string },
   ) {
-    this.wsRoomsService.vote(client, data.vote);
+    await this.wsRoomsService.vote(client, data.vote);
   }
 
+  @UseInterceptors(WsRoomCheckInterceptor)
+  @UseFilters(AttendanceWsException)
   @SubscribeMessage('showVotes')
-  handleShowVotes(@ConnectedSocket() client: ClientSocketOverride) {
-    this.wsRoomsService.reveal(client);
+  async handleShowVotes(@ConnectedSocket() client: ClientSocketOverride) {
+    await this.wsRoomsService.reveal(client);
   }
 }

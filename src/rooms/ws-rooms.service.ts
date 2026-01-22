@@ -3,6 +3,10 @@ import { Server } from 'socket.io';
 import { RoomsService } from './rooms.service';
 import { ClientSocketOverride } from './overrides/client-socket.overrides';
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
+import { VotesService } from 'src/votes/votes.service';
+import { ResultsService } from 'src/results/results.service';
+import { RedisService } from 'src/redis/redis.service';
+import { Transactional } from 'typeorm-transactional-decorator';
 
 @Injectable()
 export class WsRoomsService {
@@ -12,6 +16,9 @@ export class WsRoomsService {
   constructor(
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private readonly roomsService: RoomsService,
+    private readonly votesService: VotesService,
+    private readonly resultsService: ResultsService,
+    private readonly redisService: RedisService,
   ) {}
 
   setServer(server: Server) {
@@ -24,6 +31,7 @@ export class WsRoomsService {
     await client.join(`room-${roomSlug}`);
     client.data.roomSlug = roomSlug;
     client.data.name = name;
+    client.data.id = client.id;
     this.server.to(`room-${roomSlug}`).emit('userJoined', { name });
   }
 
@@ -46,29 +54,47 @@ export class WsRoomsService {
   ) {
     this.logger.debug(`Kicking user ${targetName} from room-${roomSlug}`);
 
-    await targetClient.leave(`room-${roomSlug}`);
-    this.server.to(`room-${roomSlug}`).emit('userKicked', { name: targetName });
+    await this.leave(targetClient);
   }
 
-  vote(client: ClientSocketOverride, vote: string) {
+  async vote(client: ClientSocketOverride, vote: string) {
     const name = client.data.name;
     const roomSlug = client.data.roomSlug;
+    const clientId = client.id;
 
     this.logger.debug(`User ${name} voted in room-${roomSlug}: ${vote}`);
+
+    // store vote in cache
+    await this.redisService.runCommand(
+      'SET',
+      `votes:${roomSlug}:${clientId}`,
+      JSON.stringify({ name, vote }),
+    );
 
     this.server.to(`room-${roomSlug}`).emit('userVoted', { name });
   }
 
-  reveal(client: ClientSocketOverride) {
+  @Transactional()
+  async reveal(client: ClientSocketOverride) {
     const roomSlug = client.data.roomSlug;
 
     this.logger.debug(`Revealing votes in room-${roomSlug}`);
 
-    this.server.to(`room-${roomSlug}`).emit('votesRevealed', {});
+    // fetch votes from cache
+    const votes = await this.redisService.fetchArray(`votes:${roomSlug}:*`);
+
+    // create results entry
+    // create vote entries
+    // emit votes revealed event
+
+    this.server.to(`room-${roomSlug}`).emit('votesRevealed', { votes });
   }
 
-  reset(roomSlug: string) {
+  async reset(roomSlug: string) {
     this.logger.debug(`Resetting votes in room-${roomSlug}`);
+
+    // clear votes from cache
+    await this.redisService.deleteKeys(`votes:${roomSlug}:*`);
 
     this.server.to(`room-${roomSlug}`).emit('votesReset');
   }

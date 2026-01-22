@@ -10,8 +10,7 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
 
   await redisIoAdapter.connectToRedis(
-    configService.get<string>('REDIS_HOST') ?? 'localhost',
-    configService.get<number>('REDIS_PORT') ?? 6379,
+    configService.getOrThrow<string>('REDIS_URL'),
   );
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
