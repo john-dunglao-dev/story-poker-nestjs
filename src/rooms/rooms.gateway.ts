@@ -7,15 +7,16 @@ import {
   ConnectedSocket,
   OnGatewayConnection,
   OnGatewayDisconnect,
-  WsException,
 } from '@nestjs/websockets';
 import { Server } from 'socket.io';
-import { Logger, UseFilters, UseInterceptors } from '@nestjs/common';
+import { Logger, UseFilters, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JoinRoomDto } from './dto/join-room.dto';
 import { WsRoomsService } from './ws-rooms.service';
 import { ClientSocketOverride } from './overrides/client-socket.overrides';
 import { AttendanceWsException } from './filters/attendance-ws-exception.filter';
-import { WsRoomCheckInterceptor } from './interceptors/ws-room-check.interceptor';
+import { WsHostDataAssignInterceptor } from './interceptors/ws-host-data-assign.interceptor';
+import { WsAttendanceGuard } from './guards/ws-attendance.guard';
+import { WsIsHostGuard } from './guards/ws-is-host.guard';
 
 @WebSocketGateway()
 export class RoomsGateway
@@ -41,6 +42,7 @@ export class RoomsGateway
     this.logger.debug(`Client disconnected: ${client.id}`);
   }
 
+  @UseInterceptors(WsHostDataAssignInterceptor)
   @SubscribeMessage('joinRoom')
   async handleJoinRoom(
     @ConnectedSocket() client: ClientSocketOverride,
@@ -50,6 +52,7 @@ export class RoomsGateway
     await this.wsRoomsService.join(client, slug, name);
   }
 
+  @UseGuards(WsAttendanceGuard)
   @SubscribeMessage('leaveRoom')
   async handleLeaveRoom(
     @ConnectedSocket() client: ClientSocketOverride,
@@ -57,7 +60,7 @@ export class RoomsGateway
     await this.wsRoomsService.leave(client);
   }
 
-  @UseInterceptors(WsRoomCheckInterceptor)
+  @UseGuards(WsAttendanceGuard, WsIsHostGuard)
   @UseFilters(AttendanceWsException)
   @SubscribeMessage('kickUser')
   async handleKickUser(
@@ -72,14 +75,14 @@ export class RoomsGateway
     }
   }
 
-  @UseInterceptors(WsRoomCheckInterceptor)
+  @UseGuards(WsAttendanceGuard, WsIsHostGuard)
   @UseFilters(AttendanceWsException)
   @SubscribeMessage('startVoting')
   async handleStartVoting(@ConnectedSocket() client: ClientSocketOverride) {
     await this.wsRoomsService.reset(client.data.roomSlug!);
   }
 
-  @UseInterceptors(WsRoomCheckInterceptor)
+  @UseGuards(WsAttendanceGuard)
   @UseFilters(AttendanceWsException)
   @SubscribeMessage('submitVote')
   async handleSubmitVote(
@@ -89,7 +92,7 @@ export class RoomsGateway
     await this.wsRoomsService.vote(client, data.vote);
   }
 
-  @UseInterceptors(WsRoomCheckInterceptor)
+  @UseGuards(WsAttendanceGuard, WsIsHostGuard)
   @UseFilters(AttendanceWsException)
   @SubscribeMessage('showVotes')
   async handleShowVotes(@ConnectedSocket() client: ClientSocketOverride) {

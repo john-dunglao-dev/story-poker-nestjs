@@ -1,4 +1,4 @@
-import { ArgumentsHost, Catch } from '@nestjs/common';
+import { ArgumentsHost, Catch, HttpStatus } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
 
@@ -10,7 +10,7 @@ export class AttendanceWsException extends WsException {
 
     client.emit('error', {
       error: true,
-      statusCode: 400,
+      statusCode: HttpStatus.BAD_REQUEST,
       message: exception.message,
     });
   }

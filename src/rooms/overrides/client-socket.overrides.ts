@@ -7,5 +7,8 @@ export class ClientSocketOverride extends Socket {
     roomSlug?: string;
     id?: string;
     room?: Room;
+    host?: {
+      username: string;
+    };
   };
 }

@@ -114,4 +114,8 @@ export class AuthService {
       username,
     });
   }
+
+  async validateToken(token: string): Promise<DecodedJwt> {
+    return await this.jwtService.verifyAsync<DecodedJwt>(token);
+  }
 }

@@ -1,8 +1,7 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Server } from 'socket.io';
 import { RoomsService } from './rooms.service';
 import { ClientSocketOverride } from './overrides/client-socket.overrides';
-import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { VotesService } from 'src/votes/votes.service';
 import { ResultsService } from 'src/results/results.service';
 import { RedisService } from 'src/redis/redis.service';
@@ -17,7 +16,6 @@ export class WsRoomsService {
   private readonly logger = new Logger(WsRoomsService.name);
 
   constructor(
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private readonly roomsService: RoomsService,
     private readonly votesService: VotesService,
     private readonly resultsService: ResultsService,
@@ -57,6 +55,8 @@ export class WsRoomsService {
     await client.leave(`room-${roomSlug}`);
     delete client.data.roomSlug;
     delete client.data.name;
+    await this.redisService.deleteKeys(`votes:${roomSlug}:${client.id}`);
+
     this.server.to(`room-${roomSlug}`).emit('userLeft', { name });
   }
 

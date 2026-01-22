@@ -8,6 +8,8 @@ import { WsRoomsService } from './ws-rooms.service';
 import { ResultsModule } from 'src/results/results.module';
 import { VotesModule } from 'src/votes/votes.module';
 import { RedisModule } from 'src/redis/redis.module';
+import { AuthModule } from 'src/auth/auth.module';
+import { WsAttendanceGuard } from './guards/ws-attendance.guard';
 
 @Module({
   imports: [
@@ -15,8 +17,9 @@ import { RedisModule } from 'src/redis/redis.module';
     ResultsModule,
     VotesModule,
     RedisModule,
+    AuthModule,
   ],
-  providers: [RoomsGateway, RoomsService, WsRoomsService],
+  providers: [RoomsGateway, RoomsService, WsRoomsService, WsAttendanceGuard],
   controllers: [RoomsController],
 })
 export class RoomsModule {}
