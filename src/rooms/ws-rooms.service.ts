@@ -7,6 +7,9 @@ import { VotesService } from 'src/votes/votes.service';
 import { ResultsService } from 'src/results/results.service';
 import { RedisService } from 'src/redis/redis.service';
 import { Transactional } from 'typeorm-transactional-decorator';
+import { WsException } from '@nestjs/websockets';
+import { Room } from './entities/room.entity';
+import { VoteData } from 'src/votes/interfaces/vote-data.interface';
 
 @Injectable()
 export class WsRoomsService {
@@ -28,10 +31,20 @@ export class WsRoomsService {
   async join(client: ClientSocketOverride, roomSlug: string, name: string) {
     this.logger.debug(`User ${name} is joining room-${roomSlug}`);
 
+    let room: Room;
+
+    try {
+      room = await this.roomsService.findOne({ slug: roomSlug });
+    } catch {
+      this.logger.error(`Room not found: room-${roomSlug}`);
+      throw new WsException('Room not found');
+    }
+
     await client.join(`room-${roomSlug}`);
     client.data.roomSlug = roomSlug;
     client.data.name = name;
     client.data.id = client.id;
+    client.data.room = room;
     this.server.to(`room-${roomSlug}`).emit('userJoined', { name });
   }
 
@@ -75,19 +88,33 @@ export class WsRoomsService {
   }
 
   @Transactional()
-  async reveal(client: ClientSocketOverride) {
+  async reveal(client: ClientSocketOverride, topic: string = 'New Topic') {
     const roomSlug = client.data.roomSlug;
 
     this.logger.debug(`Revealing votes in room-${roomSlug}`);
 
-    // fetch votes from cache
-    const votes = await this.redisService.fetchArray(`votes:${roomSlug}:*`);
+    const room = client.data.room;
+
+    if (!room) {
+      this.logger.error(`Room not found in client data: ${roomSlug}`);
+      throw new WsException('Room not found');
+    }
 
     // create results entry
-    // create vote entries
-    // emit votes revealed event
+    const result = await this.resultsService.create({ roomId: room.id, topic });
+
+    // fetch and create votes from cache
+    const votes = await this.redisService
+      .fetchArray<VoteData>(`votes:${roomSlug}:*`)
+      .then((voteData) =>
+        voteData.map((vd) => this.votesService.fromVoteData(vd, result.id)),
+      );
+    await this.votesService.batchCreate(votes);
 
     this.server.to(`room-${roomSlug}`).emit('votesRevealed', { votes });
+    this.logger.debug(
+      `Votes revealed in room-${roomSlug} for result-${result.id}`,
+    );
   }
 
   async reset(roomSlug: string) {

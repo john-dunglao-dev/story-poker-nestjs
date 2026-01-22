@@ -14,7 +14,7 @@ export class Vote extends BaseEntity<Vote> {
   name: string;
 
   @Column()
-  value: number;
+  value: string;
 
   constructor(vote: Partial<Vote>) {
     super();

@@ -1,7 +1,16 @@
+import { register } from 'tsconfig-paths';
 import { ConfigService } from '@nestjs/config';
 import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
+
+// Register tsconfig paths so src/* imports resolve correctly
+register({
+  baseUrl: __dirname,
+  paths: {
+    'src/*': ['src/*'],
+  },
+});
 
 config();
 
@@ -14,7 +23,7 @@ export default new DataSource({
   username: configService.getOrThrow<string>('DB_USERNAME'),
   password: configService.getOrThrow<string>('DB_PASSWORD'),
   database: configService.getOrThrow<string>('DB_NAME'),
-  entities: [__dirname + '/**/*.entity{.ts,.js}'],
-  migrations: [__dirname + '/src/_database/migrations/*{.ts,.js}'],
+  entities: ['src/**/*.entity.ts'],
+  migrations: ['src/_database/migrations/*.ts'],
   namingStrategy: new SnakeNamingStrategy(),
 });

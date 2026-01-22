@@ -1,26 +1,39 @@
 import { Injectable } from '@nestjs/common';
 import { CreateResultDto } from './dto/create-result.dto';
 import { UpdateResultDto } from './dto/update-result.dto';
+import { Repository } from 'typeorm';
+import { Result } from './entities/result.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+
+type ResultSearchParams = Pick<Partial<Result>, 'id' | 'roomId' | 'createdAt'>;
 
 @Injectable()
 export class ResultsService {
-  create(createResultDto: CreateResultDto) {
-    return 'This action adds a new result';
+  constructor(
+    @InjectRepository(Result)
+    private readonly resultsRepository: Repository<Result>,
+  ) {}
+
+  async create(createResultDto: CreateResultDto) {
+    const result = this.resultsRepository.create(createResultDto);
+    return this.resultsRepository.save(result);
   }
 
-  findAll() {
-    return `This action returns all results`;
+  async findAll(params: ResultSearchParams = {}) {
+    return this.resultsRepository.find({ where: { ...params } });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} result`;
+  async findOne(params: ResultSearchParams) {
+    return this.resultsRepository.findOneByOrFail({ ...params });
   }
 
-  update(id: number, updateResultDto: UpdateResultDto) {
-    return `This action updates a #${id} result`;
+  async update(id: number, updateResultDto: UpdateResultDto) {
+    const result = await this.findOne({ id });
+    Object.assign(result, updateResultDto);
+    return this.resultsRepository.save(result);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} result`;
+  async remove(id: number) {
+    return this.resultsRepository.delete(id);
   }
 }

@@ -10,7 +10,7 @@ export class CreateRoomsTable1768467632605 implements MigrationInterface {
       CREATE TABLE IF NOT EXISTS rooms (
         id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(100) NOT NULL,
-        slug VARCHAR(100) AS (LOWER(REPLACE(name, ' ', '-'))) STORED,
+        slug VARCHAR(100) NOT NULL,
         user_id BIGINT UNSIGNED,
         is_active BOOLEAN NOT NULL DEFAULT TRUE,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -31,7 +31,7 @@ export class CreateRoomsTable1768467632605 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    this.logger.log('Reverting changes: Dropping rooms table if exists.');
+    this.logger.warn('Reverting changes: Dropping rooms table if exists.');
     await queryRunner.query('DROP TABLE IF EXISTS rooms');
   }
 }

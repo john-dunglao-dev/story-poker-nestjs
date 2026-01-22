@@ -1,26 +1,61 @@
 import { Injectable } from '@nestjs/common';
 import { CreateVoteDto } from './dto/create-vote.dto';
 import { UpdateVoteDto } from './dto/update-vote.dto';
+import { Repository } from 'typeorm';
+import { Vote } from './entities/vote.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { VoteData } from './interfaces/vote-data.interface';
+
+type VoteSearchParams = Pick<
+  Partial<Vote>,
+  'id' | 'resultId' | 'name' | 'createdAt'
+>;
 
 @Injectable()
 export class VotesService {
-  create(createVoteDto: CreateVoteDto) {
-    return 'This action adds a new vote';
+  constructor(
+    @InjectRepository(Vote)
+    private readonly votesRepository: Repository<Vote>,
+  ) {}
+
+  async create(createVoteDto: CreateVoteDto) {
+    const vote = this.votesRepository.create(createVoteDto);
+    return this.votesRepository.save(vote);
   }
 
-  findAll() {
-    return `This action returns all votes`;
+  async batchCreate(createVoteDtos: CreateVoteDto[]) {
+    const votes = this.votesRepository.create(createVoteDtos);
+    return this.votesRepository.save(votes);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} vote`;
+  async findAll(params: VoteSearchParams = {}) {
+    if (Object.keys(params).length === 0) {
+      return this.votesRepository.find();
+    }
+    return this.votesRepository.find({ where: { ...params } });
   }
 
-  update(id: number, updateVoteDto: UpdateVoteDto) {
-    return `This action updates a #${id} vote`;
+  async findOne(params: VoteSearchParams) {
+    return this.votesRepository.findOneOrFail({ where: params });
+  }
+
+  async update(id: number, updateVoteDto: UpdateVoteDto) {
+    const vote = await this.findOne({ id });
+
+    Object.assign(vote, updateVoteDto);
+
+    return this.votesRepository.save(vote);
   }
 
   remove(id: number) {
-    return `This action removes a #${id} vote`;
+    return this.votesRepository.softDelete(id);
+  }
+
+  fromVoteData(voteData: VoteData, resultId: number): CreateVoteDto {
+    return {
+      name: voteData.name,
+      value: voteData.vote,
+      resultId,
+    };
   }
 }

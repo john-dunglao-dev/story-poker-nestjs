@@ -1,10 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+
+type UserSearchParams = Pick<
+  Partial<User>,
+  'username' | 'email' | 'id' | 'isActive'
+>;
 
 @Injectable()
 export class UsersService {
@@ -31,15 +36,11 @@ export class UsersService {
     return this.usersRepository.find();
   }
 
-  async findOne(
-    params: Pick<Partial<User>, 'username' | 'email' | 'id' | 'isActive'>,
-  ) {
-    return await this.usersRepository.findOneBy({ ...params });
+  async findOne(params: UserSearchParams) {
+    return await this.usersRepository.findOneByOrFail({ ...params });
   }
 
-  async findOneWithHiddenFields(
-    params: Pick<Partial<User>, 'username' | 'email' | 'id'>,
-  ) {
+  async findOneWithHiddenFields(params: UserSearchParams) {
     return await this.usersRepository
       .createQueryBuilder('users')
       .addSelect(['users.password', 'users.updatedAt', 'users.deletedAt'])
@@ -49,13 +50,7 @@ export class UsersService {
 
   async update(id: number, updateUserDto: UpdateUserDto) {
     const user = await this.findOne({ id });
-
-    if (!user) {
-      throw new NotFoundException('Attempted to update a non-existing user.');
-    }
-
     Object.assign(user, updateUserDto);
-
     return this.usersRepository.save(user);
   }
 

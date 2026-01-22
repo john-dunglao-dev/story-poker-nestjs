@@ -16,14 +16,14 @@ export class RedisService {
     ])) as Promise<T>;
   }
 
-  async fetchArray(key: string): Promise<object[]> {
-    const data: object[] = [];
+  async fetchArray<T>(key: string): Promise<T[]> {
+    const data: T[] = [];
     const keys = await this.redisClient.keys(key);
 
     for (const k of keys) {
       const values = await this.redisClient.get(k);
       if (values) {
-        data.push(JSON.parse(values) as object);
+        data.push(JSON.parse(values) as T);
       }
     }
 

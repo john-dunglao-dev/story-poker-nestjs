@@ -1,7 +1,10 @@
+import slugify from 'slugify';
 import { BaseEntity } from 'src/_database/entities/base.entity';
 import { Result } from 'src/results/entities/result.entity';
 import { User } from 'src/users/entities/user.entity';
 import {
+  BeforeInsert,
+  BeforeUpdate,
   Column,
   Entity,
   JoinColumn,
@@ -10,7 +13,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-@Entity()
+@Entity('rooms')
 export class Room extends BaseEntity<Room> {
   @PrimaryGeneratedColumn()
   id: number;
@@ -26,6 +29,14 @@ export class Room extends BaseEntity<Room> {
 
   @Column({ default: true })
   isActive: boolean;
+
+  @BeforeInsert()
+  @BeforeUpdate()
+  private generateSlug() {
+    console.log('Generating slug for room:', this.name);
+    this.slug = slugify(this.name, { lower: true, strict: true, trim: true });
+    console.log('Generated slug:', this.slug);
+  }
 
   constructor(room: Partial<Room>) {
     super();

@@ -5,6 +5,11 @@ import { Room } from './entities/room.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
+type RoomSearchParams = Pick<
+  Partial<Room>,
+  'id' | 'name' | 'slug' | 'createdAt'
+>;
+
 @Injectable()
 export class RoomsService {
   constructor(
@@ -13,16 +18,16 @@ export class RoomsService {
   ) {}
 
   create(createRoomDto: CreateRoomDto) {
-    const room = new Room(createRoomDto);
+    const room = this.roomRepository.create(createRoomDto);
     return this.roomRepository.save(room);
   }
 
-  findAll() {
-    return this.roomRepository.find();
+  findAll(params: RoomSearchParams = {}) {
+    return this.roomRepository.find({ where: { ...params } });
   }
 
-  findOne(id: number) {
-    return this.roomRepository.findOneBy({ id });
+  findOne(params: RoomSearchParams) {
+    return this.roomRepository.findOneByOrFail({ ...params });
   }
 
   update(id: number, updateRoomDto: UpdateRoomDto) {
@@ -31,5 +36,9 @@ export class RoomsService {
 
   remove(id: number) {
     return this.roomRepository.delete(id);
+  }
+
+  slugExists(slug: string) {
+    return this.roomRepository.exists({ where: { slug } });
   }
 }

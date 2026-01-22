@@ -29,7 +29,7 @@ export class CreateUsersTable1768467612098 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    this.logger.log('Reverting changes: Dropping users table if exists.');
+    this.logger.warn('Reverting changes: Dropping users table if exists.');
     await queryRunner.query('DROP TABLE IF EXISTS users');
   }
 }
