@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Server } from 'socket.io';
 import { RoomsService } from './rooms.service';
-import { ClientSocketOverride } from './overrides/client-socket.overrides';
+import {
+  ClientSocketData,
+  ClientSocketOverride,
+} from './overrides/client-socket.overrides';
 import { VotesService } from 'src/votes/votes.service';
 import { ResultsService } from 'src/results/results.service';
 import { RedisService } from 'src/redis/redis.service';
@@ -9,6 +12,8 @@ import { Transactional } from 'typeorm-transactional-decorator';
 import { WsException } from '@nestjs/websockets';
 import { Room } from './entities/room.entity';
 import { VoteData } from 'src/votes/interfaces/vote-data.interface';
+import { RoomsSessionService } from './rooms-session.service';
+import slugify from 'slugify';
 
 @Injectable()
 export class WsRoomsService {
@@ -20,6 +25,7 @@ export class WsRoomsService {
     private readonly votesService: VotesService,
     private readonly resultsService: ResultsService,
     private readonly redisService: RedisService,
+    private readonly roomsSessionService: RoomsSessionService,
   ) {}
 
   setServer(server: Server) {
@@ -38,26 +44,33 @@ export class WsRoomsService {
       throw new WsException('Room not found');
     }
 
+    const nameSlug = slugify(name, { lower: true });
+
     await client.join(`room-${roomSlug}`);
-    client.data.roomSlug = roomSlug;
-    client.data.name = name;
-    client.data.id = client.id;
-    client.data.room = room;
-    this.server.to(`room-${roomSlug}`).emit('userJoined', { name });
+    Object.assign(client.data, {
+      name,
+      nameSlug,
+      roomSlug,
+      id: client.id,
+      room,
+    });
+    await this.roomsSessionService.joinParticipant(roomSlug, nameSlug);
+    this.server.to(`room-${roomSlug}`).emit('user_joined', { name, nameSlug });
+    await this.broadcastRoomSessionUpdate(roomSlug);
   }
 
   async leave(client: ClientSocketOverride) {
-    const roomSlug = client.data.roomSlug;
-    const name = client.data.name;
+    const roomSlug = client.data.roomSlug!;
+    const name = client.data.name!;
+    const nameSlug = client.data.nameSlug!;
 
     this.logger.debug(`User ${name} is leaving room-${roomSlug}`);
 
     await client.leave(`room-${roomSlug}`);
-    delete client.data.roomSlug;
-    delete client.data.name;
+    this.deleteClientData(client);
     await this.redisService.deleteKeys(`votes:${roomSlug}:${client.id}`);
-
-    this.server.to(`room-${roomSlug}`).emit('userLeft', { name });
+    await this.roomsSessionService.leaveParticipant(roomSlug, nameSlug);
+    this.server.to(`room-${roomSlug}`).emit('user_left', { name, nameSlug });
   }
 
   async kick(
@@ -71,25 +84,19 @@ export class WsRoomsService {
   }
 
   async vote(client: ClientSocketOverride, vote: string) {
-    const name = client.data.name;
-    const roomSlug = client.data.roomSlug;
-    const clientId = client.id;
+    const name = client.data.name!;
+    const nameSlug = client.data.nameSlug!;
+    const roomSlug = client.data.roomSlug!;
 
     this.logger.debug(`User ${name} voted in room-${roomSlug}: ${vote}`);
 
-    // store vote in cache
-    await this.redisService.runCommand(
-      'SET',
-      `votes:${roomSlug}:${clientId}`,
-      JSON.stringify({ name, vote }),
-    );
-
-    this.server.to(`room-${roomSlug}`).emit('userVoted', { name });
+    await this.roomsSessionService.vote(roomSlug, nameSlug, vote);
+    this.server.to(`room-${roomSlug}`).emit('user_voted', { name, nameSlug });
   }
 
   @Transactional()
   async reveal(client: ClientSocketOverride, topic: string = 'New Topic') {
-    const roomSlug = client.data.roomSlug;
+    const roomSlug = client.data.roomSlug!;
 
     this.logger.debug(`Revealing votes in room-${roomSlug}`);
 
@@ -110,8 +117,9 @@ export class WsRoomsService {
         voteData.map((vd) => this.votesService.fromVoteData(vd, result.id)),
       );
     await this.votesService.batchCreate(votes);
-
-    this.server.to(`room-${roomSlug}`).emit('votesRevealed', { votes });
+    await this.roomsSessionService.updateSessionState(roomSlug, 'revealed');
+    await this.roomsSessionService.resetVotes(roomSlug);
+    this.server.to(`room-${roomSlug}`).emit('votes_reveal', { votes });
     this.logger.debug(
       `Votes revealed in room-${roomSlug} for result-${result.id}`,
     );
@@ -122,7 +130,28 @@ export class WsRoomsService {
 
     // clear votes from cache
     await this.redisService.deleteKeys(`votes:${roomSlug}:*`);
+    await this.roomsSessionService.updateSessionState(roomSlug, 'voting');
+    await this.roomsSessionService.resetVotes(roomSlug);
+    this.server.to(`room-${roomSlug}`).emit('votes_reset');
+  }
 
-    this.server.to(`room-${roomSlug}`).emit('votesReset');
+  /**
+   * @see WsBroadcastUpdateInterceptor
+   */
+  async broadcastRoomSessionUpdate(roomSlug: string) {
+    this.logger.debug(
+      `Broadcasting session update for room-${roomSlug} to clients`,
+    );
+
+    const session = await this.roomsSessionService.getSession(roomSlug);
+    this.server.to(`room-${roomSlug}`).emit('room_update', session);
+  }
+
+  private deleteClientData(client: ClientSocketOverride) {
+    const dummy: ClientSocketData = {} as ClientSocketData;
+    const keys = Object.keys(dummy) as Array<keyof ClientSocketData>;
+    for (const key of keys) {
+      delete client.data[key];
+    }
   }
 }

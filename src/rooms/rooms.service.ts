@@ -4,6 +4,7 @@ import { UpdateRoomDto } from './dto/update-room.dto';
 import { Room } from './entities/room.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
+import { RoomsSessionService } from './rooms-session.service';
 
 type RoomSearchParams = Pick<
   Partial<Room>,
@@ -15,11 +16,16 @@ export class RoomsService {
   constructor(
     @InjectRepository(Room)
     private readonly roomRepository: Repository<Room>,
+    private readonly roomsSessionService: RoomsSessionService,
   ) {}
 
-  create(createRoomDto: CreateRoomDto) {
+  async create(createRoomDto: CreateRoomDto) {
     const room = this.roomRepository.create(createRoomDto);
-    return this.roomRepository.save(room);
+
+    const saved = await this.roomRepository.save(room);
+    await this.roomsSessionService.createSession(saved.slug);
+
+    return saved;
   }
 
   findAll(params: RoomSearchParams = {}) {

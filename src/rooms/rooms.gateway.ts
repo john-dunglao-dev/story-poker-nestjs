@@ -17,6 +17,7 @@ import { AttendanceWsException } from './filters/attendance-ws-exception.filter'
 import { WsHostDataAssignInterceptor } from './interceptors/ws-host-data-assign.interceptor';
 import { WsAttendanceGuard } from './guards/ws-attendance.guard';
 import { WsIsHostGuard } from './guards/ws-is-host.guard';
+import { WsBroadcastUpdateInterceptor } from './interceptors/ws-broadcast-update.interceptor';
 
 @WebSocketGateway()
 export class RoomsGateway
@@ -42,8 +43,9 @@ export class RoomsGateway
     this.logger.debug(`Client disconnected: ${client.id}`);
   }
 
+  // ! Do not add WsBroadcastUpdateInterceptor here, it will cause double broadcasts
   @UseInterceptors(WsHostDataAssignInterceptor)
-  @SubscribeMessage('joinRoom')
+  @SubscribeMessage('join_room')
   async handleJoinRoom(
     @ConnectedSocket() client: ClientSocketOverride,
     @MessageBody() data: JoinRoomDto,
@@ -53,7 +55,8 @@ export class RoomsGateway
   }
 
   @UseGuards(WsAttendanceGuard)
-  @SubscribeMessage('leaveRoom')
+  @UseInterceptors(WsBroadcastUpdateInterceptor)
+  @SubscribeMessage('leave_room')
   async handleLeaveRoom(
     @ConnectedSocket() client: ClientSocketOverride,
   ): Promise<void> {
@@ -62,7 +65,8 @@ export class RoomsGateway
 
   @UseGuards(WsAttendanceGuard, WsIsHostGuard)
   @UseFilters(AttendanceWsException)
-  @SubscribeMessage('kickUser')
+  @UseInterceptors(WsBroadcastUpdateInterceptor)
+  @SubscribeMessage('kick_user')
   async handleKickUser(
     @ConnectedSocket() client: ClientSocketOverride,
     @MessageBody()
@@ -77,14 +81,16 @@ export class RoomsGateway
 
   @UseGuards(WsAttendanceGuard, WsIsHostGuard)
   @UseFilters(AttendanceWsException)
-  @SubscribeMessage('startVoting')
+  @UseInterceptors(WsBroadcastUpdateInterceptor)
+  @SubscribeMessage('start_voting')
   async handleStartVoting(@ConnectedSocket() client: ClientSocketOverride) {
     await this.wsRoomsService.reset(client.data.roomSlug!);
   }
 
   @UseGuards(WsAttendanceGuard)
   @UseFilters(AttendanceWsException)
-  @SubscribeMessage('submitVote')
+  @UseInterceptors(WsBroadcastUpdateInterceptor)
+  @SubscribeMessage('submit_vote')
   async handleSubmitVote(
     @ConnectedSocket() client: ClientSocketOverride,
     @MessageBody() data: { vote: string },
@@ -94,7 +100,8 @@ export class RoomsGateway
 
   @UseGuards(WsAttendanceGuard, WsIsHostGuard)
   @UseFilters(AttendanceWsException)
-  @SubscribeMessage('showVotes')
+  @UseInterceptors(WsBroadcastUpdateInterceptor)
+  @SubscribeMessage('show_votes')
   async handleShowVotes(@ConnectedSocket() client: ClientSocketOverride) {
     await this.wsRoomsService.reveal(client);
     await this.wsRoomsService.reset(client.data.roomSlug!);

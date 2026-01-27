@@ -10,6 +10,7 @@ import { VotesModule } from 'src/votes/votes.module';
 import { RedisModule } from 'src/redis/redis.module';
 import { AuthModule } from 'src/auth/auth.module';
 import { WsAttendanceGuard } from './guards/ws-attendance.guard';
+import { RoomsSessionService } from './rooms-session.service';
 
 @Module({
   imports: [
@@ -19,7 +20,13 @@ import { WsAttendanceGuard } from './guards/ws-attendance.guard';
     RedisModule,
     AuthModule,
   ],
-  providers: [RoomsGateway, RoomsService, WsRoomsService, WsAttendanceGuard],
+  providers: [
+    RoomsGateway,
+    RoomsService,
+    WsRoomsService,
+    WsAttendanceGuard,
+    RoomsSessionService,
+  ],
   controllers: [RoomsController],
 })
 export class RoomsModule {}
