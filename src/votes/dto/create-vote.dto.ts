@@ -1,4 +1,4 @@
-import { IsNumber, IsString, Length } from 'class-validator';
+import { IsNumber, IsOptional, IsString, Length } from 'class-validator';
 
 export class CreateVoteDto {
   @IsString()
@@ -7,7 +7,12 @@ export class CreateVoteDto {
 
   @IsString()
   @Length(1, 100)
-  value: string;
+  slug: string;
+
+  @IsString()
+  @Length(1, 100)
+  @IsOptional()
+  value: string | null;
 
   @IsNumber()
   resultId: number;

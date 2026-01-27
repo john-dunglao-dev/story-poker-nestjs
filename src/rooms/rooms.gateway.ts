@@ -14,7 +14,6 @@ import { JoinRoomDto } from './dto/join-room.dto';
 import { WsRoomsService } from './ws-rooms.service';
 import { ClientSocketOverride } from './overrides/client-socket.overrides';
 import { AttendanceWsException } from './filters/attendance-ws-exception.filter';
-import { WsHostDataAssignInterceptor } from './interceptors/ws-host-data-assign.interceptor';
 import { WsAttendanceGuard } from './guards/ws-attendance.guard';
 import { WsIsHostGuard } from './guards/ws-is-host.guard';
 import { WsBroadcastUpdateInterceptor } from './interceptors/ws-broadcast-update.interceptor';
@@ -35,8 +34,9 @@ export class RoomsGateway
     this.wsRoomsService.setServer(this.server);
   }
 
-  handleConnection(@ConnectedSocket() client: ClientSocketOverride) {
+  async handleConnection(@ConnectedSocket() client: ClientSocketOverride) {
     this.logger.debug(`Client connected: ${client.id}`);
+    await this.wsRoomsService.handleHostConnection(client);
   }
 
   handleDisconnect(@ConnectedSocket() client: ClientSocketOverride) {
@@ -44,7 +44,6 @@ export class RoomsGateway
   }
 
   // ! Do not add WsBroadcastUpdateInterceptor here, it will cause double broadcasts
-  @UseInterceptors(WsHostDataAssignInterceptor)
   @SubscribeMessage('join_room')
   async handleJoinRoom(
     @ConnectedSocket() client: ClientSocketOverride,

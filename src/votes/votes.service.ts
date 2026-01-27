@@ -4,7 +4,7 @@ import { UpdateVoteDto } from './dto/update-vote.dto';
 import { Repository } from 'typeorm';
 import { Vote } from './entities/vote.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { VoteData } from './interfaces/vote-data.interface';
+import { VoteDto } from './dto/vote.dto';
 
 type VoteSearchParams = Pick<
   Partial<Vote>,
@@ -51,10 +51,9 @@ export class VotesService {
     return this.votesRepository.softDelete(id);
   }
 
-  fromVoteData(voteData: VoteData, resultId: number): CreateVoteDto {
+  fromVoteDto(voteDto: VoteDto, resultId: number): CreateVoteDto {
     return {
-      name: voteData.name,
-      value: voteData.vote,
+      ...voteDto,
       resultId,
     };
   }

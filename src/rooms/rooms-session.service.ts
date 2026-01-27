@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from 'src/redis/redis.service';
 import { SessionRoomDto } from './dto/session-room.dto';
 import { RoomState } from './types/room-state.type';
+import { ParticipantDto } from './dto/participant.dto';
+import { VoteDto } from './dto/vote.dto';
 
 @Injectable()
 export class RoomsSessionService {
@@ -37,11 +39,14 @@ export class RoomsSessionService {
       '.',
     );
 
-    return JSON.parse(session) as SessionRoomDto;
+    const sessionObject: SessionRoomDto = JSON.parse(session) as SessionRoomDto;
+
+    return sessionObject;
   }
 
   async joinParticipant(
     roomSlug: string,
+    participantName: string,
     participantNameSlug: string,
   ): Promise<void> {
     this.logger.debug(
@@ -53,10 +58,11 @@ export class RoomsSessionService {
       `room:${roomSlug}:session`,
       `.participants.${participantNameSlug}`,
       JSON.stringify({
-        name: participantNameSlug,
+        name: participantName,
+        slug: participantNameSlug,
         connected: true,
         vote: null,
-      }),
+      } as ParticipantDto),
     );
   }
 
@@ -104,7 +110,7 @@ export class RoomsSessionService {
       'JSON.SET',
       `room:${roomSlug}:session`,
       `.participants.${participantNameSlug}.vote`,
-      JSON.stringify({ value }),
+      JSON.stringify({ value } as VoteDto),
     );
   }
 
@@ -117,5 +123,19 @@ export class RoomsSessionService {
       '.participants.*.vote',
       'null',
     );
+  }
+
+  hideVotes(session: SessionRoomDto): void {
+    this.logger.debug(
+      `Removing votes from session object for room-${session.roomSlug}`,
+    );
+
+    for (const participant of Object.values(session.participants)) {
+      if (participant?.vote?.value) {
+        participant.vote = {
+          value: 'hidden',
+        };
+      }
+    }
   }
 }

@@ -14,7 +14,10 @@ export class Vote extends BaseEntity<Vote> {
   name: string;
 
   @Column()
-  value: string;
+  slug: string;
+
+  @Column({ nullable: true, type: 'varchar' })
+  value: string | null;
 
   constructor(vote: Partial<Vote>) {
     super();

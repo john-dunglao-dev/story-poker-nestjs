@@ -11,9 +11,10 @@ import { RedisService } from 'src/redis/redis.service';
 import { Transactional } from 'typeorm-transactional-decorator';
 import { WsException } from '@nestjs/websockets';
 import { Room } from './entities/room.entity';
-import { VoteData } from 'src/votes/interfaces/vote-data.interface';
 import { RoomsSessionService } from './rooms-session.service';
 import slugify from 'slugify';
+import { CreateVoteDto } from 'src/votes/dto/create-vote.dto';
+import { AuthService } from 'src/auth/auth.service';
 
 @Injectable()
 export class WsRoomsService {
@@ -26,10 +27,31 @@ export class WsRoomsService {
     private readonly resultsService: ResultsService,
     private readonly redisService: RedisService,
     private readonly roomsSessionService: RoomsSessionService,
+    private readonly authService: AuthService,
   ) {}
 
   setServer(server: Server) {
     this.server = server;
+  }
+
+  async handleHostConnection(client: ClientSocketOverride) {
+    this.logger.debug(`Host connection check: ${client.id}`);
+
+    const token = this.extractHeaderToken(client);
+
+    if (token) {
+      try {
+        const payload = await this.authService.validateToken(token);
+        client.data.host = { username: payload.username };
+
+        this.logger.log(
+          'Token validated in WebSocket connection for host data assignment',
+          payload.username,
+        );
+      } catch {
+        this.logger.debug('Connected client is not a host', token);
+      }
+    }
   }
 
   async join(client: ClientSocketOverride, roomSlug: string, name: string) {
@@ -48,13 +70,14 @@ export class WsRoomsService {
 
     await client.join(`room-${roomSlug}`);
     Object.assign(client.data, {
+      ...(client.data ?? {}),
       name,
       nameSlug,
       roomSlug,
       id: client.id,
       room,
     });
-    await this.roomsSessionService.joinParticipant(roomSlug, nameSlug);
+    await this.roomsSessionService.joinParticipant(roomSlug, name, nameSlug);
     this.server.to(`room-${roomSlug}`).emit('user_joined', { name, nameSlug });
     await this.broadcastRoomSessionUpdate(roomSlug);
   }
@@ -111,11 +134,24 @@ export class WsRoomsService {
     const result = await this.resultsService.create({ roomId: room.id, topic });
 
     // fetch and create votes from cache
-    const votes = await this.redisService
-      .fetchArray<VoteData>(`votes:${roomSlug}:*`)
-      .then((voteData) =>
-        voteData.map((vd) => this.votesService.fromVoteData(vd, result.id)),
+    const session = await this.roomsSessionService.getSession(roomSlug);
+    const participants = Object.keys(session.participants);
+    const votes: CreateVoteDto[] = [];
+
+    for (const participantSlug of participants) {
+      const participant = session.participants[participantSlug];
+      votes.push(
+        this.votesService.fromVoteDto(
+          {
+            name: participant.name,
+            slug: participantSlug,
+            value: participant.vote?.value || null,
+          },
+          result.id,
+        ),
       );
+    }
+
     await this.votesService.batchCreate(votes);
     await this.roomsSessionService.updateSessionState(roomSlug, 'revealed');
     await this.roomsSessionService.resetVotes(roomSlug);
@@ -144,6 +180,9 @@ export class WsRoomsService {
     );
 
     const session = await this.roomsSessionService.getSession(roomSlug);
+    if (session.state !== 'revealed') {
+      this.roomsSessionService.hideVotes(session);
+    }
     this.server.to(`room-${roomSlug}`).emit('room_update', session);
   }
 
@@ -153,5 +192,11 @@ export class WsRoomsService {
     for (const key of keys) {
       delete client.data[key];
     }
+  }
+
+  private extractHeaderToken(client: ClientSocketOverride): string | undefined {
+    const authHeader = client.handshake.headers?.authorization ?? '';
+    const [type, token] = authHeader.split(' ');
+    return type !== 'Bearer' || !token ? undefined : token;
   }
 }
