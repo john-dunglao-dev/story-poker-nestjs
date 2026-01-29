@@ -1,6 +1,6 @@
 export interface DecodedJwt {
   sub: number;
-  username: string;
+  email: string;
 }
 
 export interface JwtUserPayload extends DecodedJwt {

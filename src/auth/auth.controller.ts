@@ -21,7 +21,7 @@ export class AuthController {
   @UseInterceptors(ClassSerializerInterceptor)
   @Get('user')
   getUser(@Req() request: RequestWithUserOverride) {
-    return this.authService.getUserFromUsername(request?.user?.username);
+    return this.authService.getUserFromEmail(request?.user?.email);
   }
 
   @Get()
@@ -32,8 +32,8 @@ export class AuthController {
   @Public()
   @Post()
   signIn(@Body() signInAuthDto: SignInAuthDto) {
-    const { username, password } = signInAuthDto;
-    return this.authService.signIn(username, password);
+    const { email, password } = signInAuthDto;
+    return this.authService.signIn(email, password);
   }
 
   @Public()

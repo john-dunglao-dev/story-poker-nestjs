@@ -15,33 +15,30 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  async signIn(username: string, password: string) {
-    if (!username || !password) {
+  async signIn(email: string, password: string) {
+    if (!email || !password) {
       this.logger.error('Username or password not provided');
-      throw new UnauthorizedException('Invalid username or password.');
+      throw new UnauthorizedException('Invalid email or password.');
     }
 
-    const user = await this.usersService.findOneWithHiddenFields({ username });
+    const user = await this.usersService.findOneWithHiddenFields({ email });
 
     if (!user) {
-      this.logger.error(`User not found: ${username}`);
-      throw new UnauthorizedException('Invalid username or password.');
+      this.logger.error(`User not found: ${email}`);
+      throw new UnauthorizedException('Invalid email or password.');
     }
 
     const isAuthenticated = await verify(user.password, password);
 
     if (isAuthenticated) {
-      const accessToken = await this.generateAccessToken(
-        user.id,
-        user.username,
-      );
+      const accessToken = await this.generateAccessToken(user.id, user.email);
       const refreshToken = await this.generateRefreshToken(user.id);
 
       return { accessToken, refreshToken };
     }
 
-    this.logger.error(`Invalid password for user: ${username}`);
-    throw new UnauthorizedException('Invalid username or password.');
+    this.logger.error(`Invalid password for user: ${email}`);
+    throw new UnauthorizedException('Invalid email or password.');
   }
 
   async refreshToken(accessToken: string, refreshToken: string) {
@@ -75,7 +72,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token.');
     }
 
-    const user = await this.usersService.findOne({ id: Number(decoded.sub) });
+    const user = await this.usersService.findOne({ id: decoded.sub });
 
     if (!user) {
       throw new UnauthorizedException('User not found.');
@@ -84,18 +81,18 @@ export class AuthService {
     // issue new access token (and optionally rotate refresh token)
     const newAccessToken = await this.jwtService.signAsync({
       sub: user.id,
-      username: decoded.username || user.username,
+      email: decoded.email || user.email,
     });
 
     return { accessToken: newAccessToken };
   }
 
-  async getUserFromUsername(username?: string) {
-    if (!username) {
+  async getUserFromEmail(email?: string) {
+    if (!email) {
       throw new UnauthorizedException('Invalid token.');
     }
 
-    return await this.usersService.findOne({ username });
+    return await this.usersService.findOne({ email });
   }
 
   private async generateRefreshToken(sub: number) {
@@ -108,10 +105,10 @@ export class AuthService {
     );
   }
 
-  private async generateAccessToken(sub: number, username: string) {
+  private async generateAccessToken(sub: number, email: string) {
     return await this.jwtService.signAsync({
       sub,
-      username,
+      email,
     });
   }
 

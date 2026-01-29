@@ -8,7 +8,7 @@ export interface ClientSocketData {
   id?: string;
   room?: Room;
   host?: {
-    username: string;
+    email: string;
   };
 }
 

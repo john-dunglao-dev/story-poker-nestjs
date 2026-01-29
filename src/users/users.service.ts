@@ -8,7 +8,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 
 type UserSearchParams = Pick<
   Partial<User>,
-  'username' | 'email' | 'id' | 'isActive'
+  'name' | 'email' | 'id' | 'isActive'
 >;
 
 @Injectable()
@@ -26,7 +26,7 @@ export class UsersService {
 
     this.eventEmitter.emit('user.created.next.email', {
       email: saved.email,
-      name: saved.username,
+      name: saved.name,
     });
 
     return saved;

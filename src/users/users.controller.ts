@@ -9,19 +9,20 @@ import {
   UseFilters,
   UseInterceptors,
   ClassSerializerInterceptor,
-  Req,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserAlreadyExistsExceptionFilter } from './filters/exceptions/user-already-exists-exception.filter';
 import { UserNotExistingExceptionFilter } from './filters/exceptions/user-not-existing-exception.filter';
+import { Public } from 'src/_decorators/public.decorator';
 
 @UseInterceptors(ClassSerializerInterceptor)
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @Public()
   @UseFilters(UserAlreadyExistsExceptionFilter)
   @Post()
   create(@Body() createUserDto: CreateUserDto) {

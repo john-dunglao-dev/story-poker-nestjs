@@ -42,15 +42,17 @@ export class WsRoomsService {
     if (token) {
       try {
         const payload = await this.authService.validateToken(token);
-        client.data.host = { username: payload.username };
+        client.data.host = { email: payload.email };
 
         this.logger.log(
           'Token validated in WebSocket connection for host data assignment',
-          payload.username,
+          payload.email,
         );
       } catch {
         this.logger.debug('Connected client is not a host', token);
       }
+    } else {
+      this.logger.debug('No token provided in WebSocket connection');
     }
   }
 
