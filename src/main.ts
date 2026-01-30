@@ -22,6 +22,11 @@ async function bootstrap() {
 
   app.useWebSocketAdapter(redisIoAdapter);
 
+  app.enableCors({
+    origin: configService.getOrThrow<string>('CORS_ALLOWED_ORIGINS').split(','),
+    credentials: true,
+  });
+
   await app.listen(process.env.API_PORT ?? 3000);
 }
 bootstrap();
