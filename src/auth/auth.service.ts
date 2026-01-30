@@ -4,6 +4,7 @@ import { verify } from 'argon2';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { DecodedJwt } from './interfaces/decoded-jwt.interface';
+import { Request, Response } from 'express';
 
 @Injectable()
 export class AuthService {
@@ -41,7 +42,7 @@ export class AuthService {
     throw new UnauthorizedException('Invalid email or password.');
   }
 
-  async refreshToken(accessToken: string, refreshToken: string) {
+  async refreshToken(accessToken?: string, refreshToken?: string) {
     if (!accessToken) {
       throw new UnauthorizedException('Access token not provided.');
     }
@@ -114,5 +115,45 @@ export class AuthService {
 
   async validateToken(token: string): Promise<DecodedJwt> {
     return await this.jwtService.verifyAsync<DecodedJwt>(token);
+  }
+
+  setRefreshTokenCookie(res: Response, refreshToken: string) {
+    this.logger.debug('Setting auth cookies in response');
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: this.configService.get<string>('NODE_ENV') === 'production',
+      sameSite: 'lax',
+      maxAge:
+        this.configService.get<number>(
+          'REFRESH_TOKEN_EXPIRATION',
+          60 * 60 * 24 * 10, // default to 10 days
+        ) * 1000,
+    });
+  }
+
+  setAccessTokenCookie(res: Response, accessToken: string) {
+    this.logger.debug('Setting access token cookie in response');
+
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: this.configService.get<string>('NODE_ENV') === 'production',
+      sameSite: 'lax',
+      maxAge:
+        this.configService.get<number>(
+          'ACCESS_TOKEN_EXPIRATION',
+          60 * 60 * 24, // default to 1 day
+        ) * 1000,
+    });
+  }
+
+  extractTokenFromCookie(request: Request): {
+    accessToken?: string;
+    refreshToken?: string;
+  } {
+    return {
+      accessToken: request.cookies?.accessToken as string | undefined,
+      refreshToken: request.cookies?.refreshToken as string | undefined,
+    };
   }
 }

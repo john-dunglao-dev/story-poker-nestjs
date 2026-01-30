@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { RedisSocketIoAdapterPlugin } from './_plugins/redis-socket-io-adapter.plugin';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -14,6 +15,10 @@ async function bootstrap() {
   );
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
+
+  app.use(
+    cookieParser(configService.getOrThrow<string>('COOKIE_PARSER_SECRET')),
+  );
 
   app.useWebSocketAdapter(redisIoAdapter);
 
