@@ -123,7 +123,7 @@ export class AuthService {
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: this.configService.get<string>('NODE_ENV') === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict',
       maxAge:
         this.configService.get<number>(
           'REFRESH_TOKEN_EXPIRATION',
@@ -138,7 +138,7 @@ export class AuthService {
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: this.configService.get<string>('NODE_ENV') === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict',
       maxAge:
         this.configService.get<number>(
           'ACCESS_TOKEN_EXPIRATION',
