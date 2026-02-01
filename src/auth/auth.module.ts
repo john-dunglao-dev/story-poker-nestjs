@@ -7,9 +7,16 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './guards/auth.guard';
 import { WsHostAuthGuard } from './guards/ws-host-auth.guard';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthRefreshToken } from './auth-refresh-tokens/entities/auth-refresh-token.entity';
+import { AuthRefreshTokensService } from './auth-refresh-tokens/auth-refresh-tokens.service';
+import { AuthAccessTokensService } from './auth-access-tokens/auth-access-tokens.service';
+import { AuthCookiesService } from './auth-cookies/auth-cookies.service';
+import { AuthTokensService } from './auth-tokens/auth-tokens.service';
 
 @Module({
   imports: [
+    TypeOrmModule.forFeature([AuthRefreshToken]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -31,7 +38,11 @@ import { WsHostAuthGuard } from './guards/ws-host-auth.guard';
       provide: APP_GUARD,
       useClass: AuthGuard,
     },
+    AuthRefreshTokensService,
+    AuthAccessTokensService,
+    AuthCookiesService,
+    AuthTokensService,
   ],
-  exports: [WsHostAuthGuard, AuthService],
+  exports: [WsHostAuthGuard, AuthAccessTokensService],
 })
 export class AuthModule {}

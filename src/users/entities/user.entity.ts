@@ -1,6 +1,7 @@
 import { hash } from 'argon2';
 import { Exclude } from 'class-transformer';
 import { BaseEntity } from 'src/_database/entities/base.entity';
+import { AuthRefreshToken } from 'src/auth/auth-refresh-tokens/entities/auth-refresh-token.entity';
 import { Room } from 'src/rooms/entities/room.entity';
 import {
   BeforeInsert,
@@ -47,4 +48,13 @@ export class User extends BaseEntity<User> {
 
   @OneToMany(() => Room, (room) => room.user, { eager: false })
   rooms: Room[];
+
+  @OneToMany(
+    () => AuthRefreshToken,
+    (authRefreshToken) => authRefreshToken.user,
+    {
+      eager: false,
+    },
+  )
+  authRefreshTokens: AuthRefreshToken[];
 }

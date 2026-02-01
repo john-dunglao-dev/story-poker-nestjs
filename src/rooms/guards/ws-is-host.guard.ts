@@ -10,7 +10,7 @@ export class WsIsHostGuard {
     const wsHost = context.switchToWs();
     const client = wsHost.getClient<ClientSocketOverride>();
 
-    if (!client.data.host || !client.data.host?.email) {
+    if (!client.data.host || !client.data.host?.id) {
       this.logger.warn(
         `Access denied for client ${client.id}: No host information found.`,
       );

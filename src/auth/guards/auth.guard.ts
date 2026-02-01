@@ -21,7 +21,7 @@ export class AuthGuard {
     }
 
     const request = context.switchToHttp().getRequest<Request>();
-    const token = this.extractTokenFromCookie(request);
+    const token = this.extractTokenFromHeader(request);
 
     if (!token) {
       throw new UnauthorizedException('No token provided');
@@ -38,9 +38,6 @@ export class AuthGuard {
     return true;
   }
 
-  /**
-   * @deprecated Use extractTokenFromCookie instead
-   */
   private extractTokenFromHeader(request: Request): string | undefined {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
     return type === 'Bearer' ? token : undefined;

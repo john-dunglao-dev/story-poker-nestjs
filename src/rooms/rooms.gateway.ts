@@ -18,7 +18,11 @@ import { WsAttendanceGuard } from './guards/ws-attendance.guard';
 import { WsIsHostGuard } from './guards/ws-is-host.guard';
 import { WsBroadcastUpdateInterceptor } from './interceptors/ws-broadcast-update.interceptor';
 
-@WebSocketGateway()
+@WebSocketGateway({
+  cors: {
+    credentials: true,
+  },
+})
 export class RoomsGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {

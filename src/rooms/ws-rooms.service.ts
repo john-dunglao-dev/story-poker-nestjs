@@ -14,7 +14,8 @@ import { Room } from './entities/room.entity';
 import { RoomsSessionService } from './rooms-session.service';
 import slugify from 'slugify';
 import { CreateVoteDto } from 'src/votes/dto/create-vote.dto';
-import { AuthService } from 'src/auth/auth.service';
+import { parse } from 'cookie';
+import { AuthAccessTokensService } from 'src/auth/auth-access-tokens/auth-access-tokens.service';
 
 @Injectable()
 export class WsRoomsService {
@@ -27,7 +28,7 @@ export class WsRoomsService {
     private readonly resultsService: ResultsService,
     private readonly redisService: RedisService,
     private readonly roomsSessionService: RoomsSessionService,
-    private readonly authService: AuthService,
+    private readonly authAccessTokensService: AuthAccessTokensService,
   ) {}
 
   setServer(server: Server) {
@@ -41,12 +42,12 @@ export class WsRoomsService {
 
     if (token) {
       try {
-        const payload = await this.authService.validateToken(token);
-        client.data.host = { email: payload.email };
+        const payload = await this.authAccessTokensService.validateToken(token);
+        client.data.host = { id: payload.sub };
 
         this.logger.log(
           'Token validated in WebSocket connection for host data assignment',
-          payload.email,
+          payload.sub,
         );
       } catch {
         this.logger.debug('Connected client is not a host', token);
@@ -200,5 +201,16 @@ export class WsRoomsService {
     const authHeader = client.handshake.headers?.authorization ?? '';
     const [type, token] = authHeader.split(' ');
     return type !== 'Bearer' || !token ? undefined : token;
+  }
+
+  private extractCookieToken(client: ClientSocketOverride): string | undefined {
+    const cookies = client.handshake.headers?.cookie;
+
+    if (!cookies) {
+      return undefined;
+    }
+
+    const parsedCookies = parse(cookies);
+    return parsedCookies?.accessToken;
   }
 }
