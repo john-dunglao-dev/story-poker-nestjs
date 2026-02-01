@@ -2,7 +2,7 @@ import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { AuthAccessTokensService } from '../auth-access-tokens/auth-access-tokens.service';
 import { AuthRefreshTokensService } from '../auth-refresh-tokens/auth-refresh-tokens.service';
 import { UsersService } from 'src/users/users.service';
-import { DecodedJwt } from '../interfaces/decoded-jwt.interface';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthTokensService {
@@ -12,29 +12,20 @@ export class AuthTokensService {
     private readonly authAccessTokensService: AuthAccessTokensService,
     private readonly authRefreshTokensService: AuthRefreshTokensService,
     private readonly usersService: UsersService,
+    private readonly configService: ConfigService,
   ) {}
 
-  async rotateAccessToken(
-    accessToken?: string,
+  async rotateTokens(
     refreshToken?: string,
     ipAddress?: string,
     userAgent?: string,
   ) {
     this.logger.log('Rotating access token');
-    this.logger.debug(`Access Token: ${accessToken}`);
     this.logger.debug(`Refresh Token: ${refreshToken}`);
 
-    if (!accessToken || !refreshToken) {
+    if (!refreshToken) {
       this.logger.error('Access token or refresh token not provided');
       throw new UnauthorizedException('Invalid tokens.');
-    }
-
-    // decode access token payload (may be expired)
-    const decoded =
-      await this.authAccessTokensService.validateToken(accessToken);
-
-    if (!decoded || !decoded.sub) {
-      throw new UnauthorizedException('Invalid access token.');
     }
 
     // validate refresh token
@@ -46,25 +37,26 @@ export class AuthTokensService {
       });
 
     if (!existingRefreshToken) {
-      this.logger.error('Refresh token not found or is invalid');
+      this.logger.error('Refresh token not found or is invalid', {
+        refreshToken,
+        ipAddress,
+        userAgent,
+      });
       throw new UnauthorizedException('Invalid tokens.');
     }
 
-    let refreshPayload: DecodedJwt;
-    try {
-      refreshPayload =
-        await this.authRefreshTokensService.validateToken(refreshToken);
-    } catch {
-      this.logger.error('Invalid refresh token');
-      throw new UnauthorizedException('Invalid token.');
+    const decoded =
+      await this.authRefreshTokensService.validateToken(refreshToken);
+
+    if (decoded.sub !== existingRefreshToken.userId) {
+      this.logger.error(
+        `Refresh token user ID does not match token subject: ${decoded.sub} !== ${existingRefreshToken.userId}`,
+      );
+      throw new UnauthorizedException('Invalid tokens.');
     }
 
-    if (refreshPayload.sub !== decoded.sub) {
-      this.logger.error(
-        'Refresh token subject does not match access token subject',
-      );
-      throw new UnauthorizedException('Invalid token.');
-    }
+    // revoke existing refresh token
+    await this.authRefreshTokensService.revokeRefreshToken(refreshToken);
 
     // fetch user
     const user = await this.usersService.findOne({ id: decoded.sub });
@@ -78,7 +70,27 @@ export class AuthTokensService {
     const newAccessToken = await this.authAccessTokensService.generateToken(
       user.id,
     );
+    const newRefreshToken = await this.authRefreshTokensService.generateToken(
+      user.id,
+    );
 
-    return { accessToken: newAccessToken };
+    await this.authRefreshTokensService.createRefreshToken(
+      user.id,
+      newRefreshToken,
+      new Date(
+        Date.now() +
+          this.configService.get<number>(
+            'AUTH_REFRESH_TOKEN_EXPIRATION_MS',
+            604800000,
+          ),
+      ),
+      ipAddress,
+      userAgent,
+    );
+
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+    };
   }
 }

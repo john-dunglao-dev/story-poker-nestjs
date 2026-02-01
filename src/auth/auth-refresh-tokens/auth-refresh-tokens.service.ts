@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AuthRefreshToken } from './entities/auth-refresh-token.entity';
@@ -41,14 +41,17 @@ export class AuthRefreshTokensService {
   async revokeRefreshToken(token: string): Promise<void> {
     await this.authRefreshTokenRepository.update(
       { token },
-      { isRevoked: true },
+      {
+        isRevoked: true,
+        lastUsedAt: new Date(),
+      },
     );
   }
 
   async findValidRefreshToken(
     filters: Partial<Omit<AuthRefreshToken, 'isRevoked' | 'expiresAt'>>,
   ): Promise<AuthRefreshToken | null> {
-    return this.authRefreshTokenRepository.findOne({
+    return await this.authRefreshTokenRepository.findOne({
       where: {
         ...filters,
         isRevoked: false,
@@ -70,7 +73,12 @@ export class AuthRefreshTokensService {
   }
 
   async validateToken(token: string): Promise<DecodedJwt> {
-    return await this.jwtService.verifyAsync<DecodedJwt>(token);
+    try {
+      return await this.jwtService.verifyAsync<DecodedJwt>(token);
+    } catch {
+      this.logger.error('Failed to validate refresh token');
+      throw new UnauthorizedException('Invalid token.');
+    }
   }
 
   extractTokenFromCookie(request: Request): { refreshToken?: string } {

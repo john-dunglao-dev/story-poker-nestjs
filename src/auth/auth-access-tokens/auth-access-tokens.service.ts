@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { DecodedJwt } from '../interfaces/decoded-jwt.interface';
@@ -21,6 +21,11 @@ export class AuthAccessTokensService {
   }
 
   async validateToken(token: string): Promise<DecodedJwt> {
-    return await this.jwtService.verifyAsync<DecodedJwt>(token);
+    try {
+      return await this.jwtService.verifyAsync<DecodedJwt>(token);
+    } catch {
+      this.logger.error('Failed to validate access token');
+      throw new UnauthorizedException('Invalid token.');
+    }
   }
 }

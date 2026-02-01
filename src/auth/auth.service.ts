@@ -5,6 +5,7 @@ import { AuthAccessTokensService } from './auth-access-tokens/auth-access-tokens
 import { AuthRefreshTokensService } from './auth-refresh-tokens/auth-refresh-tokens.service';
 import { User } from 'src/users/entities/user.entity';
 import { ConfigService } from '@nestjs/config';
+import { Response } from 'express';
 
 @Injectable()
 export class AuthService {
@@ -74,5 +75,18 @@ export class AuthService {
     }
 
     return this.usersService.findOne({ id });
+  }
+
+  async signOut(response: Response): Promise<void> {
+    const { refreshToken } =
+      this.authRefreshTokensService.extractTokenFromCookie(response.req);
+
+    if (!refreshToken) {
+      this.logger.warn('No refresh token found in cookies during sign-out');
+      return;
+    }
+
+    await this.authRefreshTokensService.revokeRefreshToken(refreshToken);
+    this.logger.log('User signed out');
   }
 }
