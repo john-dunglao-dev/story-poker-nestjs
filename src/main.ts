@@ -30,7 +30,10 @@ async function bootstrap() {
 
   // enable CORS
   app.enableCors({
-    origin: configService.getOrThrow<string>('CORS_ALLOWED_ORIGINS').split(','),
+    origin:
+      configService.getOrThrow<string>('NODE_ENV') === 'production'
+        ? configService.getOrThrow<string>('CORS_ALLOWED_ORIGINS').split(',')
+        : true,
     credentials: true,
   });
 
