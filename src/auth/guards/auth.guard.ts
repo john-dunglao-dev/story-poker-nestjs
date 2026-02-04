@@ -1,6 +1,7 @@
 import {
   ExecutionContext,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -10,6 +11,8 @@ import { IS_PUBLIC_KEY } from 'src/_decorators/public.decorator';
 
 @Injectable()
 export class AuthGuard {
+  private readonly logger = new Logger(AuthGuard.name);
+
   constructor(
     private readonly jwtService: JwtService,
     private readonly reflector: Reflector,
@@ -29,6 +32,8 @@ export class AuthGuard {
 
     try {
       const payload = await this.jwtService.verifyAsync<Promise<string>>(token);
+      this.logger.debug(`Token payload: ${JSON.stringify(payload)}`);
+
       // You can attach the payload to the request object if needed
       request['user'] = payload;
     } catch {

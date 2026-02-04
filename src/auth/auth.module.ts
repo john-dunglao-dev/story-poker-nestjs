@@ -22,7 +22,10 @@ import { AuthTokensService } from './auth-tokens/auth-tokens.service';
       useFactory: (configService: ConfigService) => ({
         secret: configService.getOrThrow<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: configService.getOrThrow<number>('JWT_EXPIRES_IN', 3600),
+          expiresIn: parseInt(
+            configService.getOrThrow<string>('JWT_EXPIRES_IN', '3600'),
+            10,
+          ),
         },
       }),
       inject: [ConfigService],

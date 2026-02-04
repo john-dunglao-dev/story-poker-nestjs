@@ -64,9 +64,12 @@ export class AuthRefreshTokensService {
     return await this.jwtService.signAsync(
       { sub },
       {
-        expiresIn: this.configService.get<number>(
-          'REFRESH_TOKEN_EXPIRATION',
-          86400000,
+        expiresIn: parseInt(
+          this.configService.get<string>(
+            'REFRESH_TOKEN_EXPIRATION',
+            '86400000',
+          ),
+          10,
         ),
       },
     );

@@ -36,12 +36,12 @@ export class RoomsService {
     return this.roomRepository.findOneByOrFail({ ...params });
   }
 
-  update(id: number, updateRoomDto: UpdateRoomDto) {
-    return this.roomRepository.update(id, updateRoomDto);
+  update(slug: string, updateRoomDto: UpdateRoomDto) {
+    return this.roomRepository.update(slug, updateRoomDto);
   }
 
-  remove(id: number) {
-    return this.roomRepository.delete(id);
+  remove(slug: string) {
+    return this.roomRepository.delete(slug);
   }
 
   slugExists(slug: string) {
