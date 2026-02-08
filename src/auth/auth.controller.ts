@@ -8,6 +8,7 @@ import {
   UseInterceptors,
   ClassSerializerInterceptor,
   Res,
+  UseFilters,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignInAuthDto } from './dto/sign-in-auth.dto';
@@ -17,6 +18,7 @@ import type { Request, Response } from 'express';
 import { AuthCookiesService } from './auth-cookies/auth-cookies.service';
 import { AuthRefreshTokensService } from './auth-refresh-tokens/auth-refresh-tokens.service';
 import { AuthTokensService } from './auth-tokens/auth-tokens.service';
+import { UnauthorizedClearTokenException } from './filters/exceptions/unauthorized-clear-token.exception';
 
 @Controller('auth')
 export class AuthController {
@@ -35,7 +37,7 @@ export class AuthController {
 
   @Get()
   getStatus() {
-    return { code: HttpStatus.OK, message: 'Auth service is running.' };
+    return { isAuthenticated: true };
   }
 
   @Public()
@@ -75,6 +77,7 @@ export class AuthController {
     });
   }
 
+  @UseFilters(UnauthorizedClearTokenException)
   @Public()
   @Post('refresh')
   async refreshToken(@Req() request: Request, @Res() response: Response) {
@@ -112,9 +115,11 @@ export class AuthController {
   @Post('sign-out')
   async signOut(@Res() response: Response) {
     await this.authService.signOut(response);
-    this.authCookiesService.clearCookieFromResponse(response, 'refreshToken');
+    this.authCookiesService.clearCookieFromResponse(response, 'refreshToken', {
+      maxAge: 0,
+    });
     this.authCookiesService.clearCookieFromResponse(response, 'accessToken', {
-      maxAge: 60 * 15 * 1000, // 15 minutes
+      maxAge: 0,
     });
 
     return response.status(HttpStatus.OK).json({
