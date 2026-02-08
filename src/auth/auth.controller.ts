@@ -55,6 +55,15 @@ export class AuthController {
 
     this.authCookiesService.setCookieToResponse(
       response,
+      'accessToken',
+      tokens.accessToken,
+      {
+        maxAge: 60 * 15 * 1000, // 15 minutes
+      },
+    );
+
+    this.authCookiesService.setCookieToResponse(
+      response,
       'refreshToken',
       tokens.refreshToken,
     );
@@ -80,6 +89,15 @@ export class AuthController {
 
     this.authCookiesService.setCookieToResponse(
       response,
+      'accessToken',
+      newAccessToken,
+      {
+        maxAge: 60 * 15 * 1000, // 15 minutes
+      },
+    );
+
+    this.authCookiesService.setCookieToResponse(
+      response,
       'refreshToken',
       newRefreshToken,
     );
@@ -95,6 +113,9 @@ export class AuthController {
   async signOut(@Res() response: Response) {
     await this.authService.signOut(response);
     this.authCookiesService.clearCookieFromResponse(response, 'refreshToken');
+    this.authCookiesService.clearCookieFromResponse(response, 'accessToken', {
+      maxAge: 60 * 15 * 1000, // 15 minutes
+    });
 
     return response.status(HttpStatus.OK).json({
       success: true,
