@@ -138,4 +138,16 @@ export class RoomsSessionService {
       }
     }
   }
+
+  async getSessionState(roomSlug: string): Promise<RoomState> {
+    this.logger.debug(`Getting session state for room-${roomSlug}`);
+
+    const state = await this.redisService.runCommand<string>(
+      'JSON.GET',
+      `room:${roomSlug}:session`,
+      '.state',
+    );
+
+    return state as RoomState;
+  }
 }

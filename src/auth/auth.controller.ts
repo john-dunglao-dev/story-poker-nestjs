@@ -77,7 +77,7 @@ export class AuthController {
     });
   }
 
-  @UseFilters(UnauthorizedClearTokenException)
+  // @UseFilters(UnauthorizedClearTokenException)
   @Public()
   @Post('refresh')
   async refreshToken(@Req() request: Request, @Res() response: Response) {
@@ -125,6 +125,27 @@ export class AuthController {
     return response.status(HttpStatus.OK).json({
       success: true,
       message: 'Sign-out successful',
+    });
+  }
+
+  @UseFilters(UnauthorizedClearTokenException)
+  @Public()
+  @Post('verify-refresh')
+  async verifyRefreshToken(
+    @Req() request: Request,
+    @Res() response: Response,
+  ): Promise<Response> {
+    const { refreshToken } =
+      this.authRefreshTokensService.extractTokenFromCookie(request);
+    await this.authRefreshTokensService.validate(
+      refreshToken,
+      request.ip,
+      request.headers['user-agent'],
+    );
+
+    return response.status(HttpStatus.OK).json({
+      success: true,
+      message: 'Refresh token is valid',
     });
   }
 }

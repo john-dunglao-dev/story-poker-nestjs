@@ -20,7 +20,7 @@ export class AuthAccessTokensService {
     return await this.jwtService.signAsync({ sub: userId });
   }
 
-  async validateToken(token: string): Promise<DecodedJwt> {
+  async verify(token: string): Promise<DecodedJwt> {
     try {
       return await this.jwtService.verifyAsync<DecodedJwt>(token);
     } catch {

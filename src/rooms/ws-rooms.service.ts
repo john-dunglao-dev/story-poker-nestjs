@@ -38,11 +38,11 @@ export class WsRoomsService {
   async handleHostConnection(client: ClientSocketOverride) {
     this.logger.debug(`Host connection check: ${client.id}`);
 
-    const token = this.extractHeaderToken(client);
+    const token = this.extractAuthTokenFromClient(client);
 
     if (token) {
       try {
-        const payload = await this.authAccessTokensService.validateToken(token);
+        const payload = await this.authAccessTokensService.verify(token);
         client.data.host = { id: payload.sub };
 
         this.logger.log(
@@ -113,6 +113,15 @@ export class WsRoomsService {
     const name = client.data.name!;
     const nameSlug = client.data.nameSlug!;
     const roomSlug = client.data.roomSlug!;
+
+    const state = await this.roomsSessionService.getSessionState(roomSlug);
+
+    if (state !== 'voting') {
+      this.logger.warn(
+        `User ${name} attempted to vote in room-${roomSlug} while state is ${state}`,
+      );
+      return false;
+    }
 
     this.logger.debug(`User ${name} voted in room-${roomSlug}: ${vote}`);
 
@@ -212,5 +221,12 @@ export class WsRoomsService {
 
     const parsedCookies = parse(cookies);
     return parsedCookies?.accessToken;
+  }
+
+  private extractAuthTokenFromClient(
+    client: ClientSocketOverride,
+  ): string | undefined {
+    const authToken = client.handshake?.auth?.token as string | undefined;
+    return authToken;
   }
 }

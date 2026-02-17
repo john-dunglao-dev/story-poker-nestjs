@@ -21,7 +21,8 @@ export class WsHostAuthGuard {
     const wsHost = context.switchToWs();
     const client = wsHost.getClient<ClientSocketOverride>();
 
-    const token = this.extractTokenFromHeader(client);
+    // const token = this.extractTokenFromHeader(client);
+    const token = this.extractAuthTokenFromClient(client);
 
     if (!token) {
       throw new WsException('No token provided');
@@ -35,6 +36,13 @@ export class WsHostAuthGuard {
     }
 
     return true;
+  }
+
+  private extractAuthTokenFromClient(
+    client: ClientSocketOverride,
+  ): string | undefined {
+    const authToken = client.handshake?.auth?.token as string | undefined;
+    return authToken;
   }
 
   private extractTokenFromHeader(

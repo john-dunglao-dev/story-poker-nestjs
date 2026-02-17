@@ -75,11 +75,41 @@ export class AuthRefreshTokensService {
     );
   }
 
-  async validateToken(token: string): Promise<DecodedJwt> {
+  async verify(token: string): Promise<DecodedJwt> {
     try {
       return await this.jwtService.verifyAsync<DecodedJwt>(token);
     } catch {
       this.logger.error('Failed to validate refresh token');
+      throw new UnauthorizedException('Invalid token.');
+    }
+  }
+
+  async validate(
+    token?: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<void> {
+    if (!token) {
+      this.logger.warn('No refresh token provided in request');
+      throw new UnauthorizedException('No token provided.');
+    }
+
+    const decoded = await this.verify(token);
+    const storedToken = await this.findValidRefreshToken({
+      token,
+      ipAddress,
+      userAgent,
+    });
+
+    if (!storedToken) {
+      this.logger.warn(
+        `Refresh token not found or invalid for token: ${token}`,
+      );
+      throw new UnauthorizedException('Invalid token.');
+    }
+
+    if (storedToken.userId !== decoded.sub) {
+      this.logger.warn(`Refresh token verification failed for token: ${token}`);
       throw new UnauthorizedException('Invalid token.');
     }
   }

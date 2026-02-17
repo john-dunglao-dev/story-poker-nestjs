@@ -23,40 +23,16 @@ export class AuthTokensService {
     this.logger.log('Rotating access token');
     this.logger.debug(`Refresh Token: ${refreshToken}`);
 
-    if (!refreshToken) {
-      this.logger.error('Access token or refresh token not provided');
-      throw new UnauthorizedException('Invalid tokens.');
-    }
+    await this.authRefreshTokensService.validate(
+      refreshToken,
+      ipAddress,
+      userAgent,
+    );
 
-    // validate refresh token
-    const existingRefreshToken =
-      await this.authRefreshTokensService.findValidRefreshToken({
-        token: refreshToken,
-        ipAddress,
-        userAgent,
-      });
-
-    if (!existingRefreshToken) {
-      this.logger.error('Refresh token not found or is invalid', {
-        refreshToken,
-        ipAddress,
-        userAgent,
-      });
-      throw new UnauthorizedException('Invalid tokens.');
-    }
-
-    const decoded =
-      await this.authRefreshTokensService.validateToken(refreshToken);
-
-    if (decoded.sub !== existingRefreshToken.userId) {
-      this.logger.error(
-        `Refresh token user ID does not match token subject: ${decoded.sub} !== ${existingRefreshToken.userId}`,
-      );
-      throw new UnauthorizedException('Invalid tokens.');
-    }
+    const decoded = await this.authRefreshTokensService.verify(refreshToken!);
 
     // revoke existing refresh token
-    await this.authRefreshTokensService.revokeRefreshToken(refreshToken);
+    await this.authRefreshTokensService.revokeRefreshToken(refreshToken!);
 
     // fetch user
     const user = await this.usersService.findOne({ id: decoded.sub });
@@ -91,6 +67,40 @@ export class AuthTokensService {
     return {
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
+    };
+  }
+
+  async refreshAccessToken(
+    refreshToken?: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    this.logger.log('Refreshing access token');
+    this.logger.debug(`Refresh Token: ${refreshToken}`);
+
+    await this.authRefreshTokensService.validate(
+      refreshToken,
+      ipAddress,
+      userAgent,
+    );
+
+    const decoded = await this.authRefreshTokensService.verify(refreshToken!);
+
+    // fetch user
+    const user = await this.usersService.findOne({ id: decoded.sub });
+
+    if (!user) {
+      this.logger.error(`User not found: ${decoded.sub}`);
+      throw new UnauthorizedException('Invalid token.');
+    }
+
+    // issue new access token
+    const newAccessToken = await this.authAccessTokensService.generateToken(
+      user.id,
+    );
+
+    return {
+      accessToken: newAccessToken,
     };
   }
 }
